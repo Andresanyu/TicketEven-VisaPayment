@@ -1,6 +1,14 @@
+/**
+ * Punto de entrada de la aplicación
+ */
+
 const app = require('./src/app');
-const { PORT } = require('./src/constants/config');
+
+// Puerto en el que escucha el servidor
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
-  console.log(`Servidor de pagos de Visa operativo en puerto ${PORT}`);
+  console.log(`✅ Servidor de Visa Payment iniciado en puerto ${PORT}`);
+  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 Endpoint de validación: POST http://localhost:${PORT}/api/v1/visa/validar`);
 });

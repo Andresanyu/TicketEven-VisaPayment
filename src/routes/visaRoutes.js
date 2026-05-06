@@ -1,8 +1,15 @@
-const { Router } = require('express');
-const { validarPagoVisa } = require('../controllers/visaController');
+/**
+ * Rutas para la API de Visa
+ */
 
-const router = Router();
+const express = require('express');
+const router = express.Router();
+const { validarTarjeta } = require('../controllers/visaController');
 
-router.post('/validar', validarPagoVisa);
+/**
+ * POST /api/v1/visa/validar
+ * Endpoint para validar una tarjeta de pago
+ */
+router.post('/validar', validarTarjeta);
 
 module.exports = router;
