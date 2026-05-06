@@ -10,8 +10,17 @@ const logger = require('../utils/logger');
 const validarTarjeta = (req, res) => {
   try {
     const body = req.body || {};
-    const rawNumber = body.cardNumber || body.pan || (body.card && (body.card.number || body.card.pan)) || '';
-    const masked = rawNumber ? `****${String(rawNumber).slice(-4)}` : '****unknown';
+    const { pan_number, cvv2 } = body;
+
+    if (!pan_number || !cvv2) {
+      logger.info('Incoming payment validation request rejected due to missing pan_number or cvv2');
+      return res.status(400).json({
+        transaction_status: 'ERROR',
+        details: 'pan_number y cvv2 son obligatorios'
+      });
+    }
+
+    const masked = `****${String(pan_number).slice(-4)}`;
 
     logger.info(`Incoming payment validation request - card: ${masked}`);
 
@@ -19,21 +28,23 @@ const validarTarjeta = (req, res) => {
     if (MOCK_PAYMENT_SUCCESS) {
       logger.info(`Payment approved for card ${masked}`);
       return res.status(200).json({
-        success: true,
-        mensaje: 'Pago aprobado por Visa'
+        transaction_status: 'APPROVED',
+        details: 'Pago aprobado por Visa',
+        auth_code: 'V-0000'
       });
     } else {
       logger.info(`Payment rejected for card ${masked}`);
       return res.status(200).json({
-        success: false,
-        mensaje: 'Fondos insuficientes o tarjeta inválida'
+        transaction_status: 'DECLINED',
+        details: 'Tarjeta inválida',
+        error_code: 'V-100'
       });
     }
   } catch (error) {
     logger.error(`Validation error: ${error.message}`);
     return res.status(500).json({
-      success: false,
-      mensaje: 'Error interno del servidor',
+      transaction_status: 'ERROR',
+      details: 'Error interno del servidor',
       error: error.message
     });
   }
