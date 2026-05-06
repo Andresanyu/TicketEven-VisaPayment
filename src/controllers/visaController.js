@@ -2,7 +2,7 @@
 const { MOCK_PAYMENT_SUCCESS } = require('../constants/config');
 
 /**
- * Valida una tarjeta de pago Mastercard
+ * Valida una tarjeta de pago Visa
  * @param {Object} req - Objeto request de Express
  * @param {Object} res - Objeto response de Express
  */
@@ -13,7 +13,7 @@ const validarTarjeta = (req, res) => {
     if (MOCK_PAYMENT_SUCCESS) {
       return res.status(200).json({
         success: true,
-        mensaje: "Pago aprobado por Mastercard"
+        mensaje: "Pago aprobado por Visa"
       });
     } else {
       return res.status(400).json({
