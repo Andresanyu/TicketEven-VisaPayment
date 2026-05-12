@@ -1,13 +1,12 @@
-
-const { MOCK_PAYMENT_SUCCESS } = require('../constants/config');
 const logger = require('../utils/logger');
+const pool = require('../config/db');
 
 /**
  * Valida una tarjeta de pago Visa
  * @param {Object} req - Objeto request de Express
  * @param {Object} res - Objeto response de Express
  */
-const validarTarjeta = (req, res) => {
+const validarTarjeta = async (req, res) => {
   try {
     const body = req.body || {};
     const { pan_number, cvv2 } = body;
@@ -21,27 +20,36 @@ const validarTarjeta = (req, res) => {
     }
 
     const masked = `****${String(pan_number).slice(-4)}`;
-
     logger.info(`Incoming payment validation request - card: ${masked}`);
 
-    // En un MVP estático, respondemos basado en la constante MOCK_PAYMENT_SUCCESS
-    if (MOCK_PAYMENT_SUCCESS) {
-      logger.info(`Payment approved for card ${masked}`);
-      return res.status(200).json({
-        transaction_status: 'APPROVED',
-        details: 'Pago aprobado por Visa',
-        auth_code: 'V-0000'
-      });
-    } else {
-      logger.info(`Payment rejected for card ${masked}`);
-      return res.status(200).json({
-        transaction_status: 'DECLINED',
-        details: 'Tarjeta inválida',
-        error_code: 'V-100'
-      });
+    const queryText = 'SELECT id, pan_number, cvv2, saldo, estado FROM tarjetas_visa WHERE pan_number = $1 AND cvv2 = $2 LIMIT 1';
+    const values = [pan_number, cvv2];
+
+    const result = await pool.query(queryText, values);
+
+    if (result.rows && result.rows.length > 0) {
+      const card = result.rows[0];
+      const estado = card.estado ? String(card.estado).toLowerCase() : '';
+      const isActive = estado.startsWith('act');
+
+      if (isActive) {
+        logger.info(`Payment approved for card ${masked}. Remaining balance: ${card.saldo}`);
+        return res.status(200).json({
+          transaction_status: 'APPROVED',
+          details: 'Pago aprobado por Visa',
+          auth_code: 'V-0000'
+        });
+      }
     }
+
+    logger.info(`Payment rejected for card ${masked}`);
+    return res.status(200).json({
+      transaction_status: 'DECLINED',
+      details: 'Fondos insuficientes o tarjeta inválida',
+      error_code: 'V-100'
+    });
   } catch (error) {
-    logger.error(`Validation error: ${error.message}`);
+    logger.error(`Validation error (DB): ${error.message}`);
     return res.status(500).json({
       transaction_status: 'ERROR',
       details: 'Error interno del servidor',
