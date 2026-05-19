@@ -1,6 +1,15 @@
 const logger = require('../utils/logger');
 const pool = require('../config/db');
 
+// Simulación de base de datos de clientes (PAN numbers)
+// En un entorno real esto vendría de un servicio/tabla de clientes.
+const simulatedClients = new Set([
+  '4111111111111111',
+  '4000123412341234',
+  '4222222222222',
+  '4500123456789012'
+]);
+
 /**
  * Valida una tarjeta de pago Visa
  * @param {Object} req - Objeto request de Express
@@ -19,8 +28,19 @@ const validarTarjeta = async (req, res) => {
       });
     }
 
-    const masked = `****${String(pan_number).slice(-4)}`;
+    const panStr = String(pan_number);
+    const masked = `****${panStr.slice(-4)}`;
     logger.info(`Incoming payment validation request - card: ${masked}`);
+
+    // Verificar existencia del cliente en la base simulada
+    if (!simulatedClients.has(panStr)) {
+      logger.warn(`Cliente no registrado para card ${masked}`);
+      return res.status(404).json({
+        transaction_status: 'ERROR',
+        code: 'USER_NOT_FOUND',
+        details: 'Cliente no registrado en la entidad financiera'
+      });
+    }
 
     const queryText = 'SELECT id, pan_number, cvv2, saldo, estado FROM tarjetas_visa WHERE pan_number = $1 AND cvv2 = $2 LIMIT 1';
     const values = [pan_number, cvv2];
